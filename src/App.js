@@ -5,12 +5,13 @@ import Login from './Pages/Login';
 import Dashboard from './Pages/Dashboard';
 import firebase from './firebase';
 import Authenticated from './Components/Authenticated';
+import HomeFragment from './fragments/HomeFragment';
 function App() {
   return (
     <Switch>
         <Route exact path="/">
           <Authenticated>
-            <Dashboard/>
+            <HomeFragment/>
           </Authenticated>
         </Route>
         <Route exact path="/login" >
