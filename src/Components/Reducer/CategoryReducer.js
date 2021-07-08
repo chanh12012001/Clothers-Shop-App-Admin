@@ -1,9 +1,8 @@
-const iniState = null;
+const initState = null;
 
-const categoryReducer = (state=iniState,action) => {
-    switch(action.type){
-
-        case "Load_CATEGORIES":
+const categoryReducer = (state = initState, action) => {
+    switch (action.type){
+        case "LOAD_CATEGORIES":
             state = action.payload;
             break;
         default:
@@ -11,4 +10,5 @@ const categoryReducer = (state=iniState,action) => {
     }
     return state;
 };
+
 export default categoryReducer;

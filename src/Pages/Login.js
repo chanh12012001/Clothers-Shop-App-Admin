@@ -45,7 +45,8 @@ class Login extends Component {
         })
 
         if(valid_data){
-            firestore.collection("USERS")
+            firestore
+            .collection("USERS")
             .where('email','==',this.state.email)
             .where('IsAdmin','==',true)
             .get()
@@ -58,7 +59,7 @@ class Login extends Component {
                     ).then(res=>{
                         this.props.history.replace('/')
                     }).catch(err=>{
-                        if(err.code == 'auth/wrong-password'){
+                        if(err.code === 'auth/wrong-password'){
                             this.state.password_error = "Sai mật khẩu. Vui lòng nhập lại!"
                         }
                         this.setState({

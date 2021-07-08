@@ -5,17 +5,17 @@ import { Redirect } from 'react-router-dom';
 const Authenticated = (props) => {
     const [LoggedIn, setLoggedIn] = useState(null);
 
-    firebaseAuth.onAuthStateChanged((user)=>{
+    firebaseAuth.onAuthStateChanged((user) => {
         if(user){
-            setLoggedIn(true)
+            setLoggedIn(true);
         }else{
-            setLoggedIn(false)
+            setLoggedIn(false);
         }
     })
 
     if(props.nonAuthenticated){
         if(LoggedIn == null){
-            return "Đang tải trang..."
+            return "Đang tải trang...";
         }else if(!LoggedIn){
             return props.children
         }else if(LoggedIn){

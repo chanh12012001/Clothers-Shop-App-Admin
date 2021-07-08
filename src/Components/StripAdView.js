@@ -1,10 +1,19 @@
 import React from "react"
+import { Box } from "@material-ui/core";
 
-const StripAdView = () => {
+const StripAdView = ({image,background}) => {
     return(
-        <Box bgcolor="grey">
-            <img style={{height:"100px",width:"100%"}}/>
+        <Box>
+            <img 
+              style={{
+                  height:"100px", 
+                  width:"100%", 
+                  background:background,
+                  objectFit: "scale-down",
+                }} 
+                src={image} />
         </Box>
-    )
-}
-export default StripAdView
+    );
+};
+
+export default StripAdView;
