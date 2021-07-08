@@ -11,7 +11,7 @@ function App() {
     <Switch>
         <Route exact path="/">
           <Authenticated>
-            <HomeFragment/>
+            <Dashboard/>
           </Authenticated>
         </Route>
         <Route exact path="/login" >

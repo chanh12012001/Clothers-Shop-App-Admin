@@ -1,21 +1,18 @@
 import React from "react";
-import {Box, Typography  } from '@material-ui/core';
+import { Box, Typography } from '@material-ui/core';
 import ProductView from "./ProductView";
 
-const HorizontalScroller = () => {
+const HorizontalScroller = props => {
     return (
-    <Box bgcolor="white" p="8px">
-        <Typography variant="h5">Title </Typography >
-        <Box display="flex" overflow="auto">
-            <ProductView />
-            <ProductView />
-            <ProductView />
-            <ProductView />
-            <ProductView />
-            <ProductView />
-                                
-      </Box>
-    </Box>
+        <Box style={{background:props.background}} p="16px">
+            <Typography variant="h5">{props.title}</Typography >
+            <Box display="flex" overflow="auto">
+              {props.products.map((item, index) => (
+                <ProductView item={item} />
+              ))}                   
+            </Box>
+        </Box>
     );
 };
-export default HorizontalScroller
+
+export default HorizontalScroller;

@@ -1,7 +1,8 @@
 import { combineReducers } from "redux";
+import categoryPageReducer from "./categoryPageReducer";
 import categoryReducer from "./CategoryReducer";
 
-const DEFAULT_REDUCER = (inistate, action) => {
+const DEFAULT_REDUCER = (initstate, action) => {
     return{
         key: "Hello World",
     };
@@ -10,6 +11,7 @@ const DEFAULT_REDUCER = (inistate, action) => {
 const rootReducer = combineReducers({
     DEFAULT: DEFAULT_REDUCER,
     categories: categoryReducer,
+    categoryPages: categoryPageReducer,
 });
 
 export default rootReducer;

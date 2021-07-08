@@ -6,6 +6,7 @@ import firebase from "firebase/app";
 // Add the Firebase products that you want to use
 import "firebase/auth";
 import "firebase/firestore";
+
 const firebaseConfig = {
     apiKey: "AIzaSyAhCSBYsF95Mkd0sxUa6haRiXnfXHn8UUY",
     authDomain: "myclothershops.firebaseapp.com",
@@ -16,6 +17,7 @@ const firebaseConfig = {
     appId: "1:665434250501:web:0429caea8fa2d4255ceb6c",
     measurementId: "G-1GVT5CRH6M"
   };
+  
   firebase.initializeApp(firebaseConfig);
 
   export const firebaseAuth = firebase.auth();
