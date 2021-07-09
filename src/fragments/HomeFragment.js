@@ -23,7 +23,8 @@ import {
   Backdrop,
   CircularProgress,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Snackbar,
 } from "@material-ui/core";
 import BannerSlider from "../Components/BannerSlider";
 import ProductView from "../Components/ProductView";
@@ -33,8 +34,8 @@ import GridView from "../Components/GridView";
 import { loadCategories } from "../Components/Actions/CategoryAction";
 import { Home, Add, Close, Delete, FormatColorFill, Search} from "@material-ui/icons";
 import { connect } from "react-redux";
-import { loadCategoryPage } from "../Components/Actions/categoryPageActions";
-import { firestore } from "../firebase";
+import {  loadCategoryPage } from "../Components/Actions/categoryPageActions";
+import { firestore, storageRef } from "../firebase";
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -50,6 +51,11 @@ export class HomeFragment extends Component {
       addDialog: false,
       images: [],
       colors: [],
+      selectedProducts: [],
+      positionError: "",
+      layout_titleError: "",
+      snackbar: "",
+      layout_bg:"#ffffff",
       view_type: 0,
     };
   }
@@ -62,7 +68,7 @@ export class HomeFragment extends Component {
 
   loadLastestProducts = () => {
     firestore
-    .collection("Products")
+    .collection("PRODUCTS")
     .orderBy("added_on","desc")
     .limit(8)
     .get()
@@ -72,7 +78,7 @@ export class HomeFragment extends Component {
             querySnapshot.forEach((doc) => {
                 let data = {
                   id:doc.id,
-                  image:doc.data().products_image_1,
+                  image:doc.data().product_image_1,
                   title:doc.data().product_title,
                   price:doc.data().product_price,
                 }
@@ -102,7 +108,7 @@ export class HomeFragment extends Component {
     let keywords = this.state.search.split(" ");
 
     firestore
-    .collection("Products")
+    .collection("PRODUCTS")
     .where('tags','array-contains-any', keywords)
     .get()
     .then((querySnapshot) => {
@@ -112,7 +118,7 @@ export class HomeFragment extends Component {
             querySnapshot.forEach((doc) => {
                 let data = {
                   id:doc.id,
-                  image:doc.data().products_image_1,
+                  image:doc.data().product_image_1,
                   title:doc.data().product_title,
                   price:doc.data().product_price,
                 }
@@ -171,6 +177,247 @@ export class HomeFragment extends Component {
 
     this.setState({ images, colors });
   };
+
+  uploadProductSection = () => {
+    this.setState({
+      loading: true
+    });
+    let data = {
+      view_type: this.state.view_type,
+      layout_title:this.state.layout_title,
+      index: parseInt(this.state.position),
+      layout_background: this.state.layout_bg,
+      products: this.state.selectedProducts
+    }
+  
+    const onComplete = () => {
+      let sections = this.props.categoryPages[this.state.Page];
+      sections.push(data);
+      sections.sort((a,b)=>a.index - b.index);
+    
+      this.props.addSection(this.state.Page,sections);
+
+      this.setState({
+        position : null,
+        images : [],
+        view_type : 0,
+        colors : [],
+        loading: false,
+        addDialog: false,
+        layout_title: null,
+        layout_background: null,
+      })
+    };
+    firestore
+    .collection("CATEGORIES")
+    .doc(this.state.Page)
+    .collection("TOP_DEALS")
+    .doc().set(data)
+    .then( function(){
+      onComplete();
+    }).catch(err=>{
+      this.setState({
+        loading: false
+      })
+    })
+  }
+
+  save = () =>{
+    this.setState({
+      positionError:"",
+      layout_titleError:"",
+    })
+    if(!this.state.position){
+      this.setState({
+        positionError:"Vui lòng điền vào!"
+      })
+      return
+    }
+    switch(this.state.view_type){
+      
+      case 0:
+        if(this.state.images.length < 3){
+          this.setState({
+            snackbar:"Cần tối thiểu 3 ảnh"
+          })
+          return ;
+        }
+            let index = 0;
+            let urls = [];
+            this.setState({
+              loading: true
+            })
+            this.uploadImages(this.state.images,index,urls,()=>{
+              let data = {
+                view_type:0,
+                no_of_banners:urls.length,
+                index: parseInt(this.state.position),
+              }
+              for (let x = 0; x < urls.length; x++) {
+                data["banner_"+(x+1)] = urls[x]
+                data["banner_"+(x+1)+"_background"] = this.state.colors[x]
+              }
+              const onComplete = () => {
+                let sections = this.props.categoryPages[this.state.Page];
+                sections.push(data);
+                sections.sort((a,b)=>a.index - b.index);
+               
+                this.props.addSection(this.state.Page,sections);
+
+                this.setState({
+                  position : null,
+                  images : [],
+                  view_type : 0,
+                  colors : [],
+                  loading: false,
+                  addDialog: false,
+                  layout_title: null,
+                  layout_background: null,
+                })
+              };
+              firestore
+              .collection("CATEGORIES")
+              .doc(this.state.Page)
+              .collection("TOP_DEALS")
+              .doc().set(data)
+              .then( function(){
+                onComplete();
+              }).catch(err=>{
+                this.setState({
+                  loading: false
+                })
+              })
+            });
+        
+        break;
+      case 1:
+        if(this.state.images.length < 1){
+          this.setState({
+            snackbar:"Hình ảnh không được để trống"
+          })
+          return ;
+        }
+
+            let index2 = 0;
+            let urls2 = [];
+            this.setState({
+              loading: true
+            })
+            this.uploadImages([this.state.images[0]],index2,urls2,()=>{
+              let data = {
+                view_type:1,
+                strip_ad_banner:urls2[0],
+                index: parseInt(this.state.position),
+                background: this.state.colors[0]
+              }
+            
+              const onComplete = () => {
+                let sections = this.props.categoryPages[this.state.Page];
+                sections.push(data);
+                sections.sort((a,b)=>a.index - b.index);
+              
+                this.props.addSection(this.state.Page,sections);
+
+                this.setState({
+                  position : null,
+                  images : [],
+                  view_type : 0,
+                  colors : [],
+                  loading: false,
+                  addDialog: false,
+                  layout_title: null,
+                  layout_background: null,
+                })
+              };
+              firestore
+              .collection("CATEGORIES")
+              .doc(this.state.Page)
+              .collection("TOP_DEALS")
+              .doc().set(data)
+              .then( function(){
+                onComplete();
+              }).catch(err=>{
+                this.setState({
+                  loading: false
+                })
+              })
+            });
+
+          break;
+      case 2:
+        if(!this.state.layout_title){
+          this.setState({
+            layout_titleError:"Tiêu đề không được trống", 
+          })
+          return;
+        }
+          if(this.state.selectedProducts.length < 1){
+            this.setState({
+              snackbar:"Hãy chọn ít nhất 1 sản phẩm"
+            })
+            return;
+          }
+            this.uploadProductSection();
+        break;
+      case 3:
+        if(!this.state.layout_title){
+          this.setState({
+            layout_titleError:"Tiêu đề không được trống"
+          })
+          return;
+        }
+          if(this.state.selectedProducts.length < 4){
+            this.setState({
+              snackbar:"Hãy chọn ít nhất 4 sản phẩm"
+            })
+            return;
+          }
+          this.uploadProductSection()
+        break;
+      default:
+    }
+
+
+  };
+
+  uploadImages = (images , index,urls,onCompleted) => {
+    const uploadAgain = (images , index,urls, onCompleted) => 
+          this.uploadImages(images , index,urls, onCompleted);  
+    let file = images[index]
+      var ts = String( (new Date()).getTime()),
+      i = 0,
+      out = '';
+      for(i = 0 ; i < ts.length; i += 2){
+        out += Number(ts.substr(i,2)).toString(36);
+      }
+      let filename =  'banner' + out;
+    
+
+          var uploadTask = storageRef.child("banners/" + filename + ".jpg").put(file);
+
+            uploadTask.on('state_changed', 
+        (snapshot) => {
+                   var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log('Upload is ' + progress + '% done');
+          
+        }, 
+        (error) => {
+          // Handle unsuccessful uploads
+        }, 
+        function () {
+          
+          uploadTask.snapshot.ref.getDownloadURL().then((downloadUrl)=>{
+            urls.push(downloadUrl);
+            index++;
+            if(index< images.length){
+             uploadAgain(images , index,urls, onCompleted);
+            }else{
+              onCompleted();
+            }
+          });
+        }
+      );
+  }
 
   render() {
     return (
@@ -251,106 +498,82 @@ export class HomeFragment extends Component {
                       />
                     );
                   case 2:
-                        // let productsData = []
+                        let productsData = []
 
-                        // if(!item.loaded){
+                        if(!item.loaded){
 
-                        //     item.products.forEach((id,index) => {
-                        //       if(index < 4){
-                        //         firestore
-                        //         .collection("Products")
-                        //         .doc(id)
-                        //         .get()
-                        //         .then(document=>{
-                        //           if(document.exists){
-                        //             let productData = {
-                        //               id:id,
-                        //               title:document.data()['product_title'],
-                        //               subtitle:"",
-                        //               image:document.data()['products_image_1'],
-                        //               price:document.data()['product_price'],
-                        //             }
-                        //             productsData.push(productData)
-                        //             if(index === item.products.length+1){
-                        //               item.products = productsData
-                        //               item['loaded'] = true
-                        //               this.setState({})
-                        //             }
-                        //           }
-                        //         }).catch(err=>{
-                        //           //err
-                        //         })
-                        //       }
-                        //     });
+                            item.products.forEach((id,index) => {
+                                firestore
+                                .collection("PRODUCTS")
+                                .doc(id)
+                                .get()
+                                .then(document=>{
+                                  if(document.exists){
+                                    let productData = {
+                                      id:id,
+                                      title:document.data()['product_title'],
+                                      subtitle:"",
+                                      image:document.data()['product_image_1'],
+                                      price:document.data()['product_price'],
+                                    }
+                                    productsData.push(productData)
+                                    if(index === item.products.length - 1){
+                                      item.products = productsData
+                                      item['loaded'] = true
+                                      this.setState({})
+                                    }
+                                  }
+                                }).catch(err=>{
+                                  //err
+                                })
+                            });
                           
-                        //   }
-                          let products = [];
-                          for (
-                            let index = 1;
-                            index < item.no_of_products + 1;
-                            index++
-                          ) {
-                            let data = {};
-                            data["title"] = item["product_title_" + index];
-                            data["subtitle"] = item["product_subtitle_" + index];
-                            data["price"] = item["product_price_" + index];
-                            data["image"] = item["product_image_" + index];
-                            products.push(data);
                           }
                           return (
                             <HorizontalScroller
-                              products={products}
+                              products={item.products}
                               title={item.layout_title}
                               background={item.layout_background}
                             />
                           );
                   case 3:
-                    // let gridsData = []
+                    let gridsData = []
 
-                    // if(!item.loaded){
+                    if(!item.loaded){
 
-                    //     item.products.forEach((id,index) => {
-                    //       if(index < 4){
-                    //         firestore
-                    //         .collection("Products")
-                    //         .doc(id)
-                    //         .get()
-                    //         .then(document=>{
-                    //           if(document.exists){
-                    //             let productData = {
-                    //               id:id,
-                    //               title:document.data()['product_title'],
-                    //               subtitle:"",
-                    //               image:document.data()['products_image_1'],
-                    //               price:document.data()['product_price'],
-                    //             }
-                    //             gridsData.push(productData)
-                    //             if(index === item.products.length+1){
-                    //               item.products = gridsData
-                    //               item['loaded'] = true
-                    //               this.setState({})
-                    //             }
-                    //           }
-                    //         }).catch(err=>{
-                    //           //err
-                    //         })
-                    //       }
-                    //     });
+                        item.products.forEach((id,index) => {
+                          if(index < 4){
+                            firestore
+                            .collection("PRODUCTS")
+                            .doc(id)
+                            .get()
+                            .then(document=>{
+                              if(document.exists){
+                                let productData = {
+                                  id:id,
+                                  title:document.data()['product_title'],
+                                  subtitle:"",
+                                  image:document.data()['product_image_1'],
+                                  price:document.data()['product_price'],
+                                }
+                                gridsData.push(productData)
+                                if(index === 3){
+                                  item.products = gridsData
+                                  item['loaded'] = true
+                                  this.setState({})
+                                }
+                              }
+                            }).catch(err=>{
+                              //err
+                            })
+                          }
+                        });
                       
-                    //   }
-                            
-                    let gridproducts = [];
-                    for (let index = 1; index < 5; index++) {
-                      let data = {};
-                      data["title"] = item["product_title_" + index];
-                      data["subtitle"] = item["product_subtitle_" + index];
-                      data["price"] = item["product_price_" + index];
-                      data["image"] = item["product_image_" + index];
-                      gridproducts.push(data);
-                    }
+                      }
+                          
                     return (
                       <GridView
-                        products={gridproducts}
+                        products={item.products}
                         title={item.layout_title}
                         background={item.layout_background}
                       />
@@ -393,12 +616,14 @@ export class HomeFragment extends Component {
               >
                 <Close />
               </IconButton>
-              <Typography variant="h6">Add Section</Typography>
+              <Typography variant="h6">Thêm lựa chọn</Typography>
               <Button
                 autoFocus
                 color="inherit"
                 style={{ position: "absolute", right: 0 }}
-                onClick={(e) => this.setState({ addDialog: false })}
+                onClick={(e) => 
+                  this.save()
+                }
               >
                 save
               </Button>
@@ -414,8 +639,13 @@ export class HomeFragment extends Component {
                 labelId="demo-simple-select-label"
                 id="demo-simple-select"
                 onChange={e=> {
-                  this.onFieldChange(e)
-                  this.state.images.splice(0,this.state.images.length)
+                  console.log(this.state.images);
+                  this.onFieldChange(e);
+                  this.setState({
+                    color:[],
+                    images:[],
+                    selectedProducts:[],
+                  })
                 }}
                 name="view_type"
                 dafaultValue={0}
@@ -433,6 +663,8 @@ export class HomeFragment extends Component {
                 type="number"
                 name="position"
                 size="small"
+                error = {this.state.positionError !== ""}
+                helperText={this.state.positionError}
                 onChange={this.onFieldChange}
                 margin="dense"
               />
@@ -491,12 +723,15 @@ export class HomeFragment extends Component {
                 accept="image/*"
                 id="contained-button-file"
                 onChange={(e) => {
+                  
                   if (e.target.files && e.target.files[0]) {
                     let images = this.state.images;
                     images.push(e.target.files[0]);
+                    this.state.colors.push("#ffffff");
                     this.setState({
                       images,
                     });
+                    e.target.value = null;
                   }
                 }}
                 hidden
@@ -521,8 +756,18 @@ export class HomeFragment extends Component {
               <br/>
               {(this.state.view_type === 2 || this.state.view_type === 3) &&
                (<div>
-              <Box style={{ backgroundColor: this.state.layout_bg }}>
-                <TextField id="filled-basic" label="Title" style = {{width:"100%"}} variant="standard" />
+              <Box style={{ 
+                backgroundColor: this.state.layout_bg
+                }}>
+                <TextField id="filled-basic" 
+                label="Tiêu đề"
+                 style = {{width:"100%"}} 
+                 onChange={this.onFieldChange}
+                variant="standard" 
+                name="layout_title"
+                error = {this.state.layout_titleError !== ""}
+                helperText={this.state.layout_titleError}
+                />
               </Box>
               <input
                 id={"contained-button-title"}
@@ -541,7 +786,7 @@ export class HomeFragment extends Component {
                   Tùy chỉnh màu nền
                 </Button>
               </label>
-              <h4>Chọn sản phẩm:</h4>
+              <h4>Sản phẩm được chọn: {this.state.selectedProducts.length}</h4>
               <Box display="flex">
               <TextField 
               name="search" 
@@ -565,7 +810,17 @@ export class HomeFragment extends Component {
                 this.loadLastestProducts():
                 this.state.productlist.map((item,index) => 
                   <FormControlLabel
-                    control={<Checkbox />}
+                    control={<Checkbox 
+                      onChange={e => {
+                        if(e.target.checked){
+                          this.state.selectedProducts.push(item.id)
+                        }else{
+                          let posi = this.state.selectedProducts.indexOf(item.id);
+                          this.state.selectedProducts.splice(posi,1);
+                        }
+                        this.setState({});
+                      }}
+                    />}
                     label={<ProductView item={item}/>}
                     labelPlacement="bottom"
                   />
@@ -579,6 +834,19 @@ export class HomeFragment extends Component {
         <Backdrop style={{ zIndex: 1500 }} open={this.state.loading}>
           <CircularProgress color="primary" />
         </Backdrop>
+          <Snackbar
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right',
+            }}
+            open={this.state.snackbar!==""}
+            autoHideDuration={1000}
+            onClose={e => this.setState({
+              snackbar:""
+            })}
+            message={this.state.snackbar}
+            
+          />
       </div>
     );
   }
@@ -612,6 +880,7 @@ const mapDispatchToProps = (dispatch) => {
       dispatch(loadCategories(onSuccess, onError)),
     loadPage: (category, onSuccess, onError) =>
       dispatch(loadCategoryPage(category, onSuccess, onError)),
+    addSection:(page,list) => dispatch({ type: "LOAD_PAGE",  payload: list, category:page })
   };
 };
 
