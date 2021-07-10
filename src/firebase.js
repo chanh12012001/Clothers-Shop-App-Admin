@@ -6,22 +6,24 @@ import firebase from "firebase/app";
 // Add the Firebase products that you want to use
 import "firebase/auth";
 import "firebase/firestore";
+import "firebase/storage";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyAhCSBYsF95Mkd0sxUa6haRiXnfXHn8UUY",
-    authDomain: "myclothershops.firebaseapp.com",
-    databaseURL: "https://myclothershops-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "myclothershops",
-    storageBucket: "myclothershops.appspot.com",
-    messagingSenderId: "665434250501",
-    appId: "1:665434250501:web:0429caea8fa2d4255ceb6c",
-    measurementId: "G-1GVT5CRH6M"
-  };
+  apiKey: "AIzaSyCXLa9wDIJ2bJk1JDIGYzxIyV6e1SxpTJk",
+  authDomain: "my-clothers-shop-app.firebaseapp.com",
+  projectId: "my-clothers-shop-app",
+  storageBucket: "my-clothers-shop-app.appspot.com",
+  messagingSenderId: "1048729347049",
+  appId: "1:1048729347049:web:adb438a992f38f2cd56178",
+  measurementId: "G-8N21E95RCX"
+};
   
   firebase.initializeApp(firebaseConfig);
 
   export const firebaseAuth = firebase.auth();
 
   export const firestore = firebase.firestore();  
+
+  export const storageRef = firebase.storage().ref();
 
   export default firebase
