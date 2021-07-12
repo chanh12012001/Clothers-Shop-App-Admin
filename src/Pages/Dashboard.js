@@ -1,24 +1,34 @@
-import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import Drawer from '@material-ui/core/Drawer';
-import AppBar from '@material-ui/core/AppBar';
-import CssBaseline from '@material-ui/core/CssBaseline';
-import Toolbar from '@material-ui/core/Toolbar';
-import List from '@material-ui/core/List';
-import Typography from '@material-ui/core/Typography';
-import Divider from '@material-ui/core/Divider';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemText from '@material-ui/core/ListItemText';
-import {Home, Category, Store, Settings, PowerSettingsNew, LocalMall,} from "@material-ui/icons"
-import logo from "../media/logo.png"
-import HomeFragment from '../fragments/HomeFragment';
+import React, { useState } from "react";
+import { makeStyles } from "@material-ui/core/styles";
+import Drawer from "@material-ui/core/Drawer";
+import AppBar from "@material-ui/core/AppBar";
+import CssBaseline from "@material-ui/core/CssBaseline";
+import Toolbar from "@material-ui/core/Toolbar";
+import List from "@material-ui/core/List";
+import Typography from "@material-ui/core/Typography";
+import Divider from "@material-ui/core/Divider";
+import ListItem from "@material-ui/core/ListItem";
+import ListItemIcon from "@material-ui/core/ListItemIcon";
+import ListItemText from "@material-ui/core/ListItemText";
+import {
+  Home,
+  Category,
+  Store,
+  Settings,
+  PowerSettingsNew,
+  LocalMall,
+} from "@material-ui/icons";
+import logo from "../media/logo.png";
+import HomeFragment from "../fragments/HomeFragment";
+import ManageCatergoryFragment from "../fragments/ManageCatergoryFragment";
+import { setfragment } from "react";
+import AddProduct from "../fragments/AddProduct";
 
 const drawerWidth = 240;
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    display: 'flex',
+    display: "flex",
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
@@ -31,7 +41,7 @@ const useStyles = makeStyles((theme) => ({
     width: drawerWidth,
   },
   drawerContainer: {
-    overflow: 'auto',
+    overflow: "auto",
   },
   content: {
     flexGrow: 1,
@@ -41,6 +51,20 @@ const useStyles = makeStyles((theme) => ({
 
 export default function ClippedDrawer() {
   const classes = useStyles();
+  const [fragment, setfragment] = useState("HOME");
+
+  const loadFragment = () => {
+    switch (fragment) {
+      case "HOME":
+        return <HomeFragment />;
+      case "MANAGE_CATEGORY":
+        return <ManageCatergoryFragment />;
+      case "ADD_PRODUCT":
+        return <AddProduct />;
+      default:
+        break;
+    }
+  };
 
   return (
     <div className={classes.root}>
@@ -62,54 +86,53 @@ export default function ClippedDrawer() {
           paper: classes.drawerPaper,
         }}
       >
-
         <Toolbar />
         <div className={classes.drawerContainer}>
           <List>
-            <ListItem button>
+            <ListItem button onClick={(e) => setfragment("HOME")}>
               <ListItemIcon>
-                <Home/>
+                <Home />
               </ListItemIcon>
-              <ListItemText primary="Home" />
+              <ListItemText primary="Trang chủ" />
+            </ListItem>
+            <ListItem button onClick={(e) => setfragment("MANAGE_CATEGORY")}>
+              <ListItemIcon>
+                <Category />
+              </ListItemIcon>
+              <ListItemText primary="Danh mục" />
+            </ListItem>
+            <ListItem button onClick={(e) => setfragment("ADD_PRODUCT")}>
+              <ListItemIcon>
+                <LocalMall />
+              </ListItemIcon>
+              <ListItemText primary="Sản phẩm" />
             </ListItem>
             <ListItem button>
               <ListItemIcon>
-                <Category/>
+                <Store />
               </ListItemIcon>
-              <ListItemText primary="Categories" />
+              <ListItemText primary="Đơn hàng" />
             </ListItem>
             <ListItem button>
               <ListItemIcon>
-                <LocalMall/>
+                <Settings />
               </ListItemIcon>
-              <ListItemText primary="Products" />
-            </ListItem>
-            <ListItem button>
-              <ListItemIcon>
-                <Store/>
-              </ListItemIcon>
-              <ListItemText primary="Orders" />
-            </ListItem>
-            <ListItem button>
-              <ListItemIcon>
-                <Settings/>
-              </ListItemIcon>
-              <ListItemText primary="Settings" />
+              <ListItemText primary="Cài đặt" />
             </ListItem>
             <Divider />
             <ListItem button>
               <ListItemIcon>
-                <PowerSettingsNew/>
+                <PowerSettingsNew />
               </ListItemIcon>
-              <ListItemText primary="Sign Out" />
+              <ListItemText primary="Đăng xuất" />
             </ListItem>
-          </List>  
+          </List>
           <Divider />
         </div>
       </Drawer>
       <main className={classes.content}>
         <Toolbar />
-        <HomeFragment/>
+        {loadFragment()}
       </main>
     </div>
   );

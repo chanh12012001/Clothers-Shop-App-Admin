@@ -27,14 +27,21 @@ import {
   Snackbar,
 } from "@material-ui/core";
 import BannerSlider from "../Components/BannerSlider";
-import ProductView from "../Components/ProductView";
 import HorizontalScroller from "../Components/HorizontalScroller";
+import ProductView from "../Components/ProductView";
 import StripAdView from "../Components/StripAdView";
 import GridView from "../Components/GridView";
 import { loadCategories } from "../Components/Actions/CategoryAction";
-import { Home, Add, Close, Delete, FormatColorFill, Search} from "@material-ui/icons";
+import {
+  Home,
+  Add,
+  Close,
+  Delete,
+  FormatColorFill,
+  Search,
+} from "@material-ui/icons";
 import { connect } from "react-redux";
-import {  loadCategoryPage } from "../Components/Actions/categoryPageActions";
+import { loadCategoryPage } from "../Components/Actions/categoryPageActions";
 import { firestore, storageRef } from "../firebase";
 
 const Transition = React.forwardRef(function Transition(props, ref) {
@@ -55,7 +62,8 @@ export class HomeFragment extends Component {
       positionError: "",
       layout_titleError: "",
       snackbar: "",
-      layout_bg:"#ffffff",
+      layout_bg: "#ffffff",
+
       view_type: 0,
     };
   }
@@ -68,76 +76,73 @@ export class HomeFragment extends Component {
 
   loadLastestProducts = () => {
     firestore
-    .collection("PRODUCTS")
-    .orderBy("added_on","desc")
-    .limit(8)
-    .get()
-    .then((querySnapshot) => {
+      .collection("PRODUCTS")
+      .orderBy("added_on", "desc")
+      .limit(8)
+      .get()
+      .then((querySnapshot) => {
         let productlist = [];
-        if(!querySnapshot.empty) {
-            querySnapshot.forEach((doc) => {
-                let data = {
-                  id:doc.id,
-                  image:doc.data().product_image_1,
-                  title:doc.data().product_title,
-                  price:doc.data().product_price,
-                }
-                productlist.push(data);
-            });
+        if (!querySnapshot.empty) {
+          querySnapshot.forEach((doc) => {
+            let data = {
+              id: doc.id,
+              image: doc.data().product_image_1,
+              title: doc.data().product_title,
+              price: doc.data().product_price,
+            };
+            productlist.push(data);
+          });
         }
         this.setState({
-          productlist
-        })
-    })
-    .catch((error) => {
-      console.log(error);
-    });
-  }
+          productlist,
+        });
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  };
 
   searchProducts = () => {
-
-    if(!this.state.search){
+    if (!this.state.search) {
       this.loadLastestProducts();
       return;
     }
 
     this.setState({
-      search: true
-    })
+      search: true,
+    });
 
     let keywords = this.state.search.split(" ");
 
     firestore
-    .collection("PRODUCTS")
-    .where('tags','array-contains-any', keywords)
-    .get()
-    .then((querySnapshot) => {
-
+      .collection("PRODUCTS")
+      .where("tags", "array-contains-any", keywords)
+      .get()
+      .then((querySnapshot) => {
         let productlist = [];
-        if(!querySnapshot.empty) {
-            querySnapshot.forEach((doc) => {
-                let data = {
-                  id:doc.id,
-                  image:doc.data().product_image_1,
-                  title:doc.data().product_title,
-                  price:doc.data().product_price,
-                }
-                productlist.push(data);
-            });
+        if (!querySnapshot.empty) {
+          querySnapshot.forEach((doc) => {
+            let data = {
+              id: doc.id,
+              image: doc.data().product_image_1,
+              title: doc.data().product_title,
+              price: doc.data().product_price,
+            };
+            productlist.push(data);
+          });
         }
         this.setState({
           productlist,
-          searching:false
-        })
-    })
-    .catch((error) => {
-      console.log(error);
-      this.setState({
-        
-        searching:false
+          searching: false,
+        });
       })
-    });
-  }
+      .catch((error) => {
+        console.log(error);
+        this.setState({
+          searching: false,
+        });
+      });
+  };
 
   componentDidMount() {
     if (this.props.categories === null) {
@@ -159,6 +164,8 @@ export class HomeFragment extends Component {
           //error
         }
       );
+    } else {
+      this.setState({ loading: false });
     }
   }
 
@@ -172,252 +179,423 @@ export class HomeFragment extends Component {
     let images = this.state.images;
     let colors = this.state.colors;
 
+    let image = images[index];
     images.splice(index, 1);
     colors.splice(index, 1);
-
-    this.setState({ images, colors });
+    try {
+      if (image.starsWith("https")) {
+        this.setState(
+          { loading: true },
+          this.deleteImages([image], 0, () => {
+            this.setState({
+              loading: false,
+              images,
+              colors,
+            });
+          })
+        );
+      }
+    } catch (error) {
+      this.setState({
+        images,
+        colors,
+      });
+    }
   };
 
   uploadProductSection = () => {
     this.setState({
-      loading: true
+      loading: true,
     });
-    let data = {
-      view_type: this.state.view_type,
-      layout_title:this.state.layout_title,
-      index: parseInt(this.state.position),
-      layout_background: this.state.layout_bg,
-      products: this.state.selectedProducts
+    let data;
+    if (this.state.editMode) {
+      let products = [];
+      this.state.selectedProducts.forEach((element) => {
+        products.push(element.id);
+      });
+      data = {
+        view_type: this.state.view_type,
+        layout_title: this.state.layout_title,
+        index: parseInt(this.state.position),
+        layout_background: this.state.layout_bg,
+        products,
+      };
+    } else {
+      data = {
+        view_type: this.state.view_type,
+        layout_title: this.state.layout_title,
+        index: parseInt(this.state.position),
+        layout_background: this.state.layout_bg,
+        products: this.state.selectedProducts,
+      };
     }
-  
+
     const onComplete = () => {
       let sections = this.props.categoryPages[this.state.Page];
-      sections.push(data);
-      sections.sort((a,b)=>a.index - b.index);
-    
-      this.props.addSection(this.state.Page,sections);
+
+      if (this.state.editMode) {
+        data["id"] = this.state.doc_id;
+        let section = sections.filter(
+          (item) => item.id === this.state.doc_id
+        )[0];
+        sections[sections.indexOf(section)] = data;
+      } else {
+        sections.push(data);
+        sections.sort((a, b) => a.index - b.index);
+      }
+
+      this.props.addSection(this.state.Page, sections);
 
       this.setState({
-        position : null,
-        images : [],
-        view_type : 0,
-        colors : [],
+        position: null,
+        images: [],
+        view_type: 0,
+        colors: [],
         loading: false,
         addDialog: false,
+        editMode: false,
+        selectedProducts: [],
         layout_title: null,
         layout_background: null,
-      })
+      });
     };
-    firestore
-    .collection("CATEGORIES")
-    .doc(this.state.Page)
-    .collection("TOP_DEALS")
-    .doc().set(data)
-    .then( function(){
-      onComplete();
-    }).catch(err=>{
-      this.setState({
-        loading: false
-      })
-    })
-  }
-
-  save = () =>{
-    this.setState({
-      positionError:"",
-      layout_titleError:"",
-    })
-    if(!this.state.position){
-      this.setState({
-        positionError:"Vui lòng điền vào!"
-      })
-      return
-    }
-    switch(this.state.view_type){
-      
-      case 0:
-        if(this.state.images.length < 3){
+    if (this.state.editMode) {
+      firestore
+        .collection("CATEGORIES")
+        .doc(this.state.Page)
+        .collection("TOP_DEALS")
+        .doc(this.state.doc_id)
+        .set(data)
+        .then(function (doc) {
+          onComplete();
+        })
+        .catch((err) => {
           this.setState({
-            snackbar:"Cần tối thiểu 3 ảnh"
-          })
-          return ;
-        }
-            let index = 0;
-            let urls = [];
-            this.setState({
-              loading: true
-            })
-            this.uploadImages(this.state.images,index,urls,()=>{
-              let data = {
-                view_type:0,
-                no_of_banners:urls.length,
-                index: parseInt(this.state.position),
-              }
-              for (let x = 0; x < urls.length; x++) {
-                data["banner_"+(x+1)] = urls[x]
-                data["banner_"+(x+1)+"_background"] = this.state.colors[x]
-              }
-              const onComplete = () => {
-                let sections = this.props.categoryPages[this.state.Page];
-                sections.push(data);
-                sections.sort((a,b)=>a.index - b.index);
-               
-                this.props.addSection(this.state.Page,sections);
+            loading: false,
+          });
+          //error
+        });
+    } else {
+      firestore
+        .collection("CATEGORIES")
+        .doc(this.state.Page)
+        .collection("TOP_DEALS")
+        .add(data)
+        .then(function (doc) {
+          data["id"] = doc.id;
+          onComplete();
+        })
+        .catch((err) => {
+          this.setState({
+            loading: false,
+          });
+        });
+    }
+  };
 
-                this.setState({
-                  position : null,
-                  images : [],
-                  view_type : 0,
-                  colors : [],
-                  loading: false,
-                  addDialog: false,
-                  layout_title: null,
-                  layout_background: null,
-                })
-              };
-              firestore
+  save = () => {
+    this.setState({
+      positionError: "",
+      layout_titleError: "",
+    });
+    if (!this.state.position) {
+      this.setState({
+        positionError: "Vui lòng điền vào!",
+      });
+      return;
+    }
+    switch (this.state.view_type) {
+      case 0:
+        if (this.state.images.length < 3) {
+          this.setState({
+            snackbar: "Cần tối thiểu 3 ảnh",
+          });
+          return;
+        }
+        let index = 0;
+        let urls = [];
+        this.setState({
+          loading: true,
+        });
+        this.uploadImages(this.state.images, index, urls, () => {
+          let data = {
+            view_type: 0,
+            no_of_banners: urls.length,
+            index: parseInt(this.state.position),
+          };
+          for (let x = 0; x < urls.length; x++) {
+            data["banner_" + (x + 1)] = urls[x];
+            data["banner_" + (x + 1) + "_background"] = this.state.colors[x];
+          }
+          const onComplete = () => {
+            let sections = this.props.categoryPages[this.state.Page];
+            if (this.state.editMode) {
+              data["id"] = this.state.doc_id;
+              let section = sections.filter(
+                (item) => item.id === this.state.doc_id
+              )[0];
+              sections[sections.indexOf(section)] = data;
+            } else {
+              sections.push(data);
+              sections.sort((a, b) => a.index - b.index);
+            }
+
+            this.props.addSection(this.state.Page, sections);
+
+            this.setState({
+              position: null,
+              images: [],
+              view_type: 0,
+              colors: [],
+              loading: false,
+              addDialog: false,
+              editMode: false,
+              selectedProducts: [],
+              layout_title: null,
+              layout_background: null,
+            });
+          };
+          if (this.state.editMode) {
+            firestore
               .collection("CATEGORIES")
               .doc(this.state.Page)
               .collection("TOP_DEALS")
-              .doc().set(data)
-              .then( function(){
+              .doc(this.state.doc_id)
+              .set(data)
+              .then(function (doc) {
                 onComplete();
-              }).catch(err=>{
-                this.setState({
-                  loading: false
-                })
               })
-            });
-        
+              .catch((err) => {
+                this.setState({
+                  loading: false,
+                });
+                //error
+              });
+          } else {
+            firestore
+              .collection("CATEGORIES")
+              .doc(this.state.Page)
+              .collection("TOP_DEALS")
+              .add(data)
+              .then(function (doc) {
+                data["id"] = doc.id;
+                onComplete();
+              })
+              .catch((err) => {
+                this.setState({
+                  loading: false,
+                });
+              });
+          }
+        });
+
         break;
       case 1:
-        if(this.state.images.length < 1){
+        if (this.state.images.length < 1) {
           this.setState({
-            snackbar:"Hình ảnh không được để trống"
-          })
-          return ;
+            snackbar: "Hình ảnh không được để trống",
+          });
+          return;
         }
 
-            let index2 = 0;
-            let urls2 = [];
-            this.setState({
-              loading: true
-            })
-            this.uploadImages([this.state.images[0]],index2,urls2,()=>{
-              let data = {
-                view_type:1,
-                strip_ad_banner:urls2[0],
-                index: parseInt(this.state.position),
-                background: this.state.colors[0]
-              }
-            
-              const onComplete = () => {
-                let sections = this.props.categoryPages[this.state.Page];
-                sections.push(data);
-                sections.sort((a,b)=>a.index - b.index);
-              
-                this.props.addSection(this.state.Page,sections);
+        let index2 = 0;
+        let urls2 = [];
+        this.setState({
+          loading: true,
+        });
+        this.uploadImages([this.state.images[0]], index2, urls2, () => {
+          let data = {
+            view_type: 1,
+            strip_ad_banner: urls2[0],
+            index: parseInt(this.state.position),
+            background: this.state.colors[0],
+          };
 
-                this.setState({
-                  position : null,
-                  images : [],
-                  view_type : 0,
-                  colors : [],
-                  loading: false,
-                  addDialog: false,
-                  layout_title: null,
-                  layout_background: null,
-                })
-              };
-              firestore
+          const onComplete = () => {
+            let sections = this.props.categoryPages[this.state.Page];
+
+            if (this.state.editMode) {
+              data["id"] = this.state.doc_id;
+              let section = sections.filter(
+                (item) => item.id === this.state.doc_id
+              )[0];
+              sections[sections.indexOf(section)] = data;
+            } else {
+              sections.push(data);
+              sections.sort((a, b) => a.index - b.index);
+            }
+
+            this.props.addSection(this.state.Page, sections);
+
+            this.setState({
+              position: null,
+              images: [],
+              view_type: 0,
+              colors: [],
+              loading: false,
+              addDialog: false,
+              selectedProducts: [],
+              editMode: false,
+              layout_title: null,
+              layout_background: null,
+            });
+          };
+
+          if (this.state.editMode) {
+            firestore
               .collection("CATEGORIES")
               .doc(this.state.Page)
               .collection("TOP_DEALS")
-              .doc().set(data)
-              .then( function(){
+              .doc(this.state.doc_id)
+              .set(data)
+              .then(function (doc) {
                 onComplete();
-              }).catch(err=>{
-                this.setState({
-                  loading: false
-                })
               })
-            });
+              .catch((err) => {
+                this.setState({
+                  loading: false,
+                });
+                //error
+              });
+          } else {
+            firestore
+              .collection("CATEGORIES")
+              .doc(this.state.Page)
+              .collection("TOP_DEALS")
+              .add(data)
+              .then(function (doc) {
+                data["id"] = doc.id;
+                onComplete();
+              })
+              .catch((err) => {
+                this.setState({
+                  loading: false,
+                });
+              });
+          }
+        });
 
-          break;
+        break;
       case 2:
-        if(!this.state.layout_title){
+        if (!this.state.layout_title) {
           this.setState({
-            layout_titleError:"Tiêu đề không được trống", 
-          })
+            layout_titleError: "Tiêu đề không được trống",
+          });
           return;
         }
-          if(this.state.selectedProducts.length < 1){
-            this.setState({
-              snackbar:"Hãy chọn ít nhất 1 sản phẩm"
-            })
-            return;
-          }
-            this.uploadProductSection();
+        if (this.state.selectedProducts.length < 1) {
+          this.setState({
+            snackbar: "Hãy chọn ít nhất 1 sản phẩm",
+          });
+          return;
+        }
+        this.uploadProductSection();
         break;
       case 3:
-        if(!this.state.layout_title){
+        if (!this.state.layout_title) {
           this.setState({
-            layout_titleError:"Tiêu đề không được trống"
-          })
+            layout_titleError: "Tiêu đề không được trống",
+          });
           return;
         }
-          if(this.state.selectedProducts.length < 4){
-            this.setState({
-              snackbar:"Hãy chọn ít nhất 4 sản phẩm"
-            })
-            return;
-          }
-          this.uploadProductSection()
+        if (this.state.selectedProducts.length < 4) {
+          this.setState({
+            snackbar: "Hãy chọn ít nhất 4 sản phẩm",
+          });
+          return;
+        }
+        this.uploadProductSection();
         break;
       default:
     }
-
-
   };
 
-  uploadImages = (images , index,urls,onCompleted) => {
-    const uploadAgain = (images , index,urls, onCompleted) => 
-          this.uploadImages(images , index,urls, onCompleted);  
-    let file = images[index]
-      var ts = String( (new Date()).getTime()),
-      i = 0,
-      out = '';
-      for(i = 0 ; i < ts.length; i += 2){
-        out += Number(ts.substr(i,2)).toString(36);
+  deleteImages = (images, index, onComplete) => {
+    const deleteAgain = (images, index, onComplete) =>
+      this.deleteImages(images, index, onComplete);
+
+    let splited_link = images[index].split("/");
+    let name = splited_link[splited_link.length - 1]
+      .split("?")[0]
+      .replace("banners%2F", "");
+
+    storageRef
+      .child("banners/" + name)
+      .delete()
+      .then(() => {
+        index++;
+        if (index < images.length) {
+          deleteAgain(images, index, onComplete);
+        } else {
+          onComplete();
+        }
+      })
+      .catch((err) => {
+        this.setState({ loading: false });
+      });
+  };
+
+  uploadImages = (images, index, urls, onCompleted) => {
+    const uploadAgain = (images, index, urls, onCompleted) =>
+      this.uploadImages(images, index, urls, onCompleted);
+
+    let file = images[index];
+    try {
+      if (file.starsWith("https")) {
+        urls.push(file);
+        index++;
+        if (index < images.length) {
+          uploadAgain(images, index, urls, onCompleted);
+        } else {
+          onCompleted();
+        }
       }
-      let filename =  'banner' + out;
-    
+    } catch (error) {
+      var ts = String(new Date().getTime()),
+        i = 0,
+        out = "";
+      for (i = 0; i < ts.length; i += 2) {
+        out += Number(ts.substr(i, 2)).toString(36);
+      }
 
-          var uploadTask = storageRef.child("banners/" + filename + ".jpg").put(file);
+      let filename = "banner" + out;
 
-            uploadTask.on('state_changed', 
-        (snapshot) => {
-                   var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log('Upload is ' + progress + '% done');
-          
-        }, 
-        (error) => {
+      var uploadTask = storageRef
+        .child("banners/" + filename + ".jpg")
+        .put(file);
+
+      uploadTask.on(
+        "state_changed",
+        function (snapshot) {
+          var progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log("Upload is " + progress + "% done");
+        },
+        function (error) {
           // Handle unsuccessful uploads
-        }, 
+        },
         function () {
-          
-          uploadTask.snapshot.ref.getDownloadURL().then((downloadUrl)=>{
+          uploadTask.snapshot.ref.getDownloadURL().then((downloadUrl) => {
             urls.push(downloadUrl);
             index++;
-            if(index< images.length){
-             uploadAgain(images , index,urls, onCompleted);
-            }else{
+            if (index < images.length) {
+              uploadAgain(images, index, urls, onCompleted);
+            } else {
               onCompleted();
             }
           });
         }
       );
-  }
+    }
+  };
+
+  renderImageUrl = (item) => {
+    try {
+      return URL.createObjectURL(item);
+    } catch (error) {
+      return item;
+    }
+  };
 
   render() {
     return (
@@ -475,118 +653,278 @@ export class HomeFragment extends Component {
           </AppBar>
 
           {this.props.categoryPages
-            ? this.props.categoryPages[this.state.Pages].map((item, index) => {
-                switch (item.view_type) {
-                  case 0:
-                    let banners = [];
-                    for (
-                      let index = 1;
-                      index < item.no_of_banners + 1;
-                      index++
-                    ) {
-                      const banner = item["banner_" + index];
-                      const background =
-                        item["banner_" + index + "_background"];
-                      banners.push({ banner, background });
-                    }
-                    return <BannerSlider Images={banners} />;
-                  case 1:
-                    return (
-                      <StripAdView
-                        image={item.strip_ad_banner}
-                        background={item.background}
-                      />
-                    );
-                  case 2:
-                        let productsData = []
-
-                        if(!item.loaded){
-
-                            item.products.forEach((id,index) => {
-                                firestore
-                                .collection("PRODUCTS")
-                                .doc(id)
-                                .get()
-                                .then(document=>{
-                                  if(document.exists){
-                                    let productData = {
-                                      id:id,
-                                      title:document.data()['product_title'],
-                                      subtitle:"",
-                                      image:document.data()['product_image_1'],
-                                      price:document.data()['product_price'],
-                                    }
-                                    productsData.push(productData)
-                                    if(index === item.products.length - 1){
-                                      item.products = productsData
-                                      item['loaded'] = true
-                                      this.setState({})
-                                    }
-                                  }
-                                }).catch(err=>{
-                                  //err
-                                })
+            ? this.props.categoryPages[this.state.Pages].map(
+                (item, indexMain) => {
+                  switch (item.view_type) {
+                    case 0:
+                      let banners = [];
+                      let images = [];
+                      let colors = [];
+                      for (
+                        let index = 1;
+                        index < item.no_of_banners + 1;
+                        index++
+                      ) {
+                        const banner = item["banner_" + index];
+                        const background =
+                          item["banner_" + index + "_background"];
+                        banners.push({ banner, background });
+                        images.push(banner);
+                        colors.push(background);
+                      }
+                      return (
+                        <BannerSlider
+                          edit={() => {
+                            this.setState({
+                              view_type: item.view_type,
+                              position: item.index,
+                              images: images,
+                              colors: colors,
+                              addDialog: true,
+                              editMode: true,
+                              doc_id: item.id,
                             });
-                          
+                          }}
+                          delete={() =>
+                            this.setState(
+                              {
+                                loading: true,
+                              },
+                              this.deleteImages(images, 0, () => {
+                                firestore
+                                  .collection("CATEGORIES")
+                                  .doc(this.state.Page)
+                                  .collection("TOP_DEALS")
+                                  .doc(item.id)
+                                  .delete()
+                                  .then(() => {
+                                    this.props.categoryPages[
+                                      this.state.Pages
+                                    ].splice(indexMain, 1);
+                                    this.setState({
+                                      loading: false,
+                                    });
+                                  })
+                                  .catch((err) => {
+                                    this.setState({
+                                      loading: false,
+                                    });
+                                  });
+                              })
+                            )
                           }
-                          return (
-                            <HorizontalScroller
-                              products={item.products}
-                              title={item.layout_title}
-                              background={item.layout_background}
-                            />
-                          );
-                  case 3:
-                    let gridsData = []
+                          Images={banners}
+                        />
+                      );
+                    case 1:
+                      return (
+                        <StripAdView
+                          edit={() => {
+                            this.setState({
+                              view_type: item.view_type,
+                              position: item.index,
+                              images: [item.strip_ad_banner],
+                              colors: [item.background],
+                              addDialog: true,
+                              editMode: true,
+                              doc_id: item.id,
+                            });
+                          }}
+                          delete={() =>
+                            this.setState(
+                              {
+                                loading: true,
+                              },
+                              this.deleteImages(
+                                [item.strip_ad_banner],
+                                0,
+                                () => {
+                                  firestore
+                                    .collection("CATEGORIES")
+                                    .doc(this.state.Page)
+                                    .collection("TOP_DEALS")
+                                    .doc(item.id)
+                                    .delete()
+                                    .then(() => {
+                                      this.props.categoryPages[
+                                        this.state.Pages
+                                      ].splice(indexMain, 1);
+                                      this.setState({
+                                        loading: false,
+                                      });
+                                    })
+                                    .catch((err) => {
+                                      this.setState({
+                                        loading: false,
+                                      });
+                                    });
+                                }
+                              )
+                            )
+                          }
+                          image={item.strip_ad_banner}
+                          background={item.background}
+                        />
+                      );
+                    case 2:
+                      let productsData = [];
 
-                    if(!item.loaded){
-
-                        item.products.forEach((id,index) => {
-                          if(index < 4){
-                            firestore
+                      if (!item.loaded) {
+                        item.products.forEach((id, index) => {
+                          firestore
                             .collection("PRODUCTS")
                             .doc(id)
                             .get()
-                            .then(document=>{
-                              if(document.exists){
+                            .then((document) => {
+                              if (document.exists) {
                                 let productData = {
-                                  id:id,
-                                  title:document.data()['product_title'],
-                                  subtitle:"",
-                                  image:document.data()['product_image_1'],
-                                  price:document.data()['product_price'],
-                                }
-                                gridsData.push(productData)
-                                if(index === 3){
-                                  item.products = gridsData
-                                  item['loaded'] = true
-                                  this.setState({})
+                                  id: id,
+                                  title: document.data()["product_title"],
+                                  subtitle: "",
+                                  image: document.data()["product_image_1"],
+                                  price: document.data()["product_price"],
+                                };
+                                productsData.push(productData);
+                                if (index === item.products.length - 1) {
+                                  item.products = productsData;
+                                  item["loaded"] = true;
+                                  this.setState({});
                                 }
                               }
-                            }).catch(err=>{
+                            })
+                            .catch((err) => {
                               //err
+                            });
+                        });
+                      }
+                      return (
+                        <HorizontalScroller
+                          edit={() => {
+                            this.setState({
+                              view_type: item.view_type,
+                              position: item.index,
+                              addDialog: true,
+                              editMode: true,
+                              doc_id: item.id,
+                              selectedProducts: item.products,
+                              layout_title: item.layout_title,
+                              layout_bg: item.layout_background,
+                            });
+                          }}
+                          delete={() =>
+                            this.setState({ loading: true }, () => {
+                              firestore
+                                .collection("CATEGORIES")
+                                .doc(this.state.Page)
+                                .collection("TOP_DEALS")
+                                .doc(item.id)
+                                .delete()
+                                .then(() => {
+                                  this.props.categoryPages[
+                                    this.state.Pages
+                                  ].splice(indexMain, 1);
+                                  this.setState({
+                                    loading: false,
+                                  });
+                                })
+                                .catch((err) => {
+                                  this.setState({
+                                    loading: false,
+                                  });
+                                });
                             })
                           }
+                          products={item.products}
+                          title={item.layout_title}
+                          background={item.layout_background}
+                        />
+                      );
+                    case 3:
+                      let gridsData = [];
+
+                      if (!item.loaded) {
+                        item.products.forEach((id, index) => {
+                          if (index < 4) {
+                            firestore
+                              .collection("PRODUCTS")
+                              .doc(id)
+                              .get()
+                              .then((document) => {
+                                if (document.exists) {
+                                  let productData = {
+                                    id: id,
+                                    title: document.data()["product_title"],
+                                    subtitle: "",
+                                    image: document.data()["product_image_1"],
+                                    price: document.data()["product_price"],
+                                  };
+                                  gridsData.push(productData);
+                                  if (index === 3) {
+                                    item.products = gridsData;
+                                    item["loaded"] = true;
+                                    this.setState({});
+                                  }
+                                }
+                              })
+                              .catch((err) => {
+                                //err
+                              });
+                          }
                         });
-                      
                       }
-                          
-                    return (
-                      <GridView
-                        products={item.products}
-                        title={item.layout_title}
-                        background={item.layout_background}
-                      />
-                    );
-                  default:
-                    break;
+
+                      return (
+                        <GridView
+                          edit={() => {
+                            this.setState({
+                              view_type: item.view_type,
+                              position: item.index,
+                              addDialog: true,
+                              editMode: true,
+                              doc_id: item.id,
+                              selectedProducts: item.products,
+                              layout_title: item.layout_title,
+                              layout_bg: item.layout_background,
+                            });
+                          }}
+                          delete={() =>
+                            this.setState({ loading: true }, () => {
+                              firestore
+                                .collection("CATEGORIES")
+                                .doc(this.state.Page)
+                                .collection("TOP_DEALS")
+                                .doc(item.id)
+                                .delete()
+                                .then(() => {
+                                  this.props.categoryPages[
+                                    this.state.Pages
+                                  ].splice(indexMain, 1);
+                                  this.setState({
+                                    loading: false,
+                                  });
+                                })
+                                .catch((err) => {
+                                  this.setState({
+                                    loading: false,
+                                  });
+                                });
+                            })
+                          }
+                          products={item.products}
+                          title={item.layout_title}
+                          background={item.layout_background}
+                        />
+                      );
+                    default:
+                      break;
+                  }
                 }
-              })
+              )
             : null}
           <Fab
             color="primary"
             aria-label="add"
-            onClick={(e) => this.setState({ addDialog: true })}
+            onClick={(e) => this.setState({ editMode: false, addDialog: true })}
             style={{ position: "fixed", bottom: "50px", right: "50px" }}
           >
             <Add />
@@ -616,14 +954,14 @@ export class HomeFragment extends Component {
               >
                 <Close />
               </IconButton>
-              <Typography variant="h6">Thêm lựa chọn</Typography>
+              <Typography variant="h6">
+                {this.state.editMode ? "Sửa" : "Thêm"}
+              </Typography>
               <Button
                 autoFocus
                 color="inherit"
                 style={{ position: "absolute", right: 0 }}
-                onClick={(e) => 
-                  this.save()
-                }
+                onClick={(e) => this.save()}
               >
                 save
               </Button>
@@ -638,215 +976,243 @@ export class HomeFragment extends Component {
               <Select
                 labelId="demo-simple-select-label"
                 id="demo-simple-select"
-                onChange={e=> {
-                  console.log(this.state.images);
+                onChange={(e) => {
                   this.onFieldChange(e);
                   this.setState({
-                    color:[],
-                    images:[],
-                    selectedProducts:[],
-                  })
+                    color: [],
+                    images: [],
+                    selectedProducts: [],
+                  });
                 }}
                 name="view_type"
-                dafaultValue={0}
+                dafaultValue={this.state.view_type}
               >
                 <MenuItem value={0}>BANNER SLIDER</MenuItem>
                 <MenuItem value={1}>STRIP AD</MenuItem>
                 <MenuItem value={2}>HORIZONTAL SCROLLER</MenuItem>
                 <MenuItem value={3}>GRID VIEW</MenuItem>
               </Select>
-              <br/>
+              <br />
               <TextField
                 label="Vị trí"
                 id="outlined-size-small"
                 variant="outlined"
                 type="number"
                 name="position"
+                defaultValue={this.state.position}
                 size="small"
-                error = {this.state.positionError !== ""}
+                error={this.state.positionError !== ""}
                 helperText={this.state.positionError}
                 onChange={this.onFieldChange}
                 margin="dense"
               />
-              </FormControl>
-              <br/>
-              <Box display="flex" flexWrap="true">
-                {this.state.images.map((item, index) => (
-                  <Box margin="12px">
-                    <img
-                      src={URL.createObjectURL(item)}
-                      style={{
-                        height: "90px",
-                        width:
-                          this.state.view_type === 0
-                            ? "160px"
-                            : this.state.view_type === 1
-                            ? "210px"
-                            : 0,
-                        objectFit: "scale-down",
-                        backgroundColor: this.state.colors[index],
-                      }}
-                    />
-                    <br />
-                    <input
-                      id={"contained-button-" + index}
-                      type="color"
-                      hidden
-                      onChange={(e) => {
-                        let colors = this.state.colors;
-                        colors[index] = e.target.value;
-                        this.setState({
-                          colors,
-                        });
-                      }}
-                      defaultValue="#000000"
-                    />
+            </FormControl>
+            <br />
+
+            <Box display="flex" flexWrap="true">
+              {this.state.images.map((item, index) => (
+                <Box margin="12px">
+                  <img
+                    src={this.renderImageUrl(item)}
+                    style={{
+                      height: "90px",
+                      width:
+                        this.state.view_type === 0
+                          ? "160px"
+                          : this.state.view_type === 1
+                          ? "210px"
+                          : 0,
+                      objectFit: "scale-down",
+                      backgroundColor: this.state.colors[index],
+                    }}
+                  />
+                  <br />
+                  <input
+                    id={"contained-button-" + index}
+                    type="color"
+                    hidden
+                    onChange={(e) => {
+                      let colors = this.state.colors;
+                      colors[index] = e.target.value;
+                      this.setState({
+                        colors,
+                      });
+                    }}
+                    defaultValue="#000000"
+                  />
+                  <IconButton
+                    aria-label="delete"
+                    onClick={(e) => this.removeImage(index)}
+                  >
+                    <Delete />
+                  </IconButton>
+                  <label htmlFor={"contained-button-" + index}>
                     <IconButton
-                      aria-label="delete"
-                      onClick={(e) => this.removeImage(index)}
+                      color="primary"
+                      aria-label="upload picture"
+                      component="span"
                     >
-                      <Delete />
+                      <FormatColorFill />
                     </IconButton>
-                    <label htmlFor={"contained-button-" + index}>
-                      <IconButton
-                        color="primary"
-                        aria-label="upload picture"
-                        component="span"
-                      >
-                        <FormatColorFill />
-                      </IconButton>
-                    </label>
-                  </Box>
-                ))}
-              </Box>
-              <input
-                accept="image/*"
-                id="contained-button-file"
-                onChange={(e) => {
-                  
-                  if (e.target.files && e.target.files[0]) {
-                    let images = this.state.images;
-                    images.push(e.target.files[0]);
-                    this.state.colors.push("#ffffff");
-                    this.setState({
-                      images,
-                    });
-                    e.target.value = null;
-                  }
-                }}
-                hidden
-                name="images"
-                type="file"
-              />
-              <br/>
-              {this.state.view_type === 0 && this.state.images.length < 8 ? (
-                <label htmlFor="contained-button-file">
-                  <Button variant="contained" color="primary" component="span">
-                    Thêm Ảnh
-                  </Button>
-                </label>
-              ) : null}
-              {this.state.view_type === 1 && this.state.images.length < 1 ? (
-                <label htmlFor="contained-button-file">
-                  <Button variant="contained" color="primary" component="span">
-                    Thêm Ảnh
-                  </Button>
-                </label>
-              ) : null}
-              <br/>
-              {(this.state.view_type === 2 || this.state.view_type === 3) &&
-               (<div>
-              <Box style={{ 
-                backgroundColor: this.state.layout_bg
-                }}>
-                <TextField id="filled-basic" 
-                label="Tiêu đề"
-                 style = {{width:"100%"}} 
-                 onChange={this.onFieldChange}
-                variant="standard" 
-                name="layout_title"
-                error = {this.state.layout_titleError !== ""}
-                helperText={this.state.layout_titleError}
-                />
-              </Box>
-              <input
-                id={"contained-button-title"}
-                type="color"
-                hidden
-                onChange={this.onFieldChange}
-                name="layout_bg"
-                defaultValue="#ffffff"
-              />
-              <label htmlFor={"contained-button-title"}>
-                <Button
-                  color="primary"
-                  aria-label="upload picture"
-                  component="span"
-                >
-                  Tùy chỉnh màu nền
+                  </label>
+                </Box>
+              ))}
+            </Box>
+            <input
+              accept="image/*"
+              id="contained-button-file"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  let images = this.state.images;
+                  images.push(e.target.files[0]);
+                  this.state.colors.push("#ffffff");
+                  this.setState({
+                    images,
+                  });
+                  e.target.value = null;
+                }
+              }}
+              hidden
+              name="images"
+              type="file"
+            />
+            <br />
+
+            {this.state.view_type === 0 && this.state.images.length < 8 ? (
+              <label htmlFor="contained-button-file">
+                <Button variant="contained" color="primary" component="span">
+                  Thêm Ảnh
                 </Button>
               </label>
-              <h4>Sản phẩm được chọn: {this.state.selectedProducts.length}</h4>
-              <Box display="flex">
-              <TextField 
-              name="search" 
-              style={{flexGrow:1}}
-              onChange={this.onFieldChange}
-              label="Tìm kiếm" 
-              variant="outlined" 
-              size="small"
-              />
-              <Button variant = "contained" color="primary" onClick={(e)=>this.searchProducts()}>
-                Tìm
-              </Button>
-              </Box>
-              <br/>
-              {this.state.searching ?
-              <Box display="flex" justifyContent="center" bgcolor="#00000010">
-                <CircularProgress />
-              </Box>:
-              <Box display="flex" flexWrap="true" bgcolor="#00000010">
-                {this.state.productlist === undefined ? 
-                this.loadLastestProducts():
-                this.state.productlist.map((item,index) => 
-                  <FormControlLabel
-                    control={<Checkbox 
-                      onChange={e => {
-                        if(e.target.checked){
-                          this.state.selectedProducts.push(item.id)
-                        }else{
-                          let posi = this.state.selectedProducts.indexOf(item.id);
-                          this.state.selectedProducts.splice(posi,1);
-                        }
-                        this.setState({});
-                      }}
-                    />}
-                    label={<ProductView item={item}/>}
-                    labelPlacement="bottom"
+            ) : null}
+            {this.state.view_type === 1 && this.state.images.length < 1 ? (
+              <label htmlFor="contained-button-file">
+                <Button variant="contained" color="primary" component="span">
+                  Thêm Ảnh
+                </Button>
+              </label>
+            ) : null}
+            <br />
+
+            {(this.state.view_type === 2 || this.state.view_type === 3) && (
+              <div>
+                <Box
+                  style={{
+                    backgroundColor: this.state.layout_bg,
+                  }}
+                >
+                  <TextField
+                    id="filled-basic"
+                    label="Tiêu đề"
+                    style={{ width: "100%" }}
+                    onChange={this.onFieldChange}
+                    variant="standard"
+                    name="layout_title"
+                    defaultValue={this.state.layout_title}
+                    error={this.state.layout_titleError !== ""}
+                    helperText={this.state.layout_titleError}
                   />
+                </Box>
+                <input
+                  id={"contained-button-title"}
+                  type="color"
+                  hidden
+                  onChange={this.onFieldChange}
+                  name="layout_bg"
+                  defaultValue="#ffffff"
+                />
+                <label htmlFor={"contained-button-title"}>
+                  <Button
+                    color="primary"
+                    aria-label="upload picture"
+                    component="span"
+                  >
+                    Tùy chỉnh màu nền
+                  </Button>
+                </label>
+                <h4>
+                  Sản phẩm được chọn: {this.state.selectedProducts.length}
+                </h4>
+                <Box display="flex">
+                  <TextField
+                    name="search"
+                    style={{ flexGrow: 1 }}
+                    onChange={this.onFieldChange}
+                    label="Tìm kiếm"
+                    variant="outlined"
+                    size="small"
+                  />
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={(e) => this.searchProducts()}
+                  >
+                    Tìm
+                  </Button>
+                </Box>
+                <br />
+                {this.state.searching ? (
+                  <Box
+                    display="flex"
+                    justifyContent="center"
+                    bgcolor="#00000010"
+                  >
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  <Box display="flex" flexWrap="true" bgcolor="#00000010">
+                    {this.state.productlist === undefined
+                      ? this.loadLastestProducts()
+                      : this.state.productlist.map((item, index) => (
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                defaultChecked={
+                                  this.state.selectedProducts.filter(
+                                    (x) => x.id === item.id
+                                  ).length > 0
+                                }
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    this.state.selectedProducts.push(item.id);
+                                  } else {
+                                    let posi =
+                                      this.state.selectedProducts.indexOf(
+                                        item.id
+                                      );
+                                    this.state.selectedProducts.splice(posi, 1);
+                                  }
+                                  this.setState({});
+                                }}
+                              />
+                            }
+                            label={<ProductView item={item} />}
+                            labelPlacement="bottom"
+                          />
+                        ))}
+                  </Box>
                 )}
-              </Box>
-              }
               </div>
-               )}
-         </Box>
+            )}
+          </Box>
         </Dialog>
         <Backdrop style={{ zIndex: 1500 }} open={this.state.loading}>
           <CircularProgress color="primary" />
         </Backdrop>
-          <Snackbar
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right',
-            }}
-            open={this.state.snackbar!==""}
-            autoHideDuration={1000}
-            onClose={e => this.setState({
-              snackbar:""
-            })}
-            message={this.state.snackbar}
-            
-          />
+        <Snackbar
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "right",
+          }}
+          open={this.state.snackbar !== ""}
+          autoHideDuration={1000}
+          onClose={(e) =>
+            this.setState({
+              snackbar: "",
+            })
+          }
+          message={this.state.snackbar}
+        />
       </div>
     );
   }
@@ -880,7 +1246,8 @@ const mapDispatchToProps = (dispatch) => {
       dispatch(loadCategories(onSuccess, onError)),
     loadPage: (category, onSuccess, onError) =>
       dispatch(loadCategoryPage(category, onSuccess, onError)),
-    addSection:(page,list) => dispatch({ type: "LOAD_PAGE",  payload: list, category:page })
+    addSection: (page, list) =>
+      dispatch({ type: "LOAD_PAGE", payload: list, category: page }),
   };
 };
 
