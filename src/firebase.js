@@ -11,7 +11,7 @@ import "firebase/storage";
 const firebaseConfig = {
   apiKey: "AIzaSyCXLa9wDIJ2bJk1JDIGYzxIyV6e1SxpTJk",
   authDomain: "my-clothers-shop-app.firebaseapp.com",
-  git stdatabaseURL: "https://my-clothers-shop-app.firebaseio.com",
+  databaseURL: "https://my-clothers-shop-app.firebaseio.com",
   projectId: "my-clothers-shop-app",
   storageBucket: "my-clothers-shop-app.appspot.com",
   messagingSenderId: "1048729347049",
