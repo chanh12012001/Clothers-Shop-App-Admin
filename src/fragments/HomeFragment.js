@@ -490,6 +490,18 @@ export class HomeFragment extends Component {
           return;
         }
         this.uploadProductSection();
+        this.setState({
+          position: null,
+          images: [],
+          view_type: 0,
+          colors: [],
+          loading: false,
+          addDialog: false,
+          selectedProducts: [],
+          editMode: false,
+          layout_title: null,
+          layout_background: null,
+        });
         break;
       case 3:
         if (!this.state.layout_title) {

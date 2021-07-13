@@ -190,7 +190,7 @@ class AddProduct extends Component {
 
     mandatoryFields.forEach((element) => {
       let field = this.state[element];
-      if (field.value === "") {
+      if (field?.value === "") {
         field.error = "Required!";
         uploadSignal = false;
       }
